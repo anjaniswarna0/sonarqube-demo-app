@@ -1,22 +1,102 @@
-name: Application CI
+name: Reusable SonarQube Scan
 
 on:
-  push:
-    branches:
-      - main
+  workflow_call:
+    inputs:
+      project_key:
+        description: SonarQube project key
+        required: true
+        type: string
 
-  pull_request:
-    branches:
-      - main
+      java_version:
+        description: Java version
+        required: false
+        type: string
+        default: '21'
 
-jobs:
-  sonar:
-    uses: anjaniswarna0/grandcentral-demo/.github/workflows/scan-sonarqube.yml@main
-
-    with:
-      project_key: sonarqube-demo-app
-      java_version: '21'
-      sonar_host_url: ${{ vars.SONAR_HOST_URL }}
+      coverage_threshold:
+        description: Minimum code coverage percentage
+        required: false
+        type: number
+        default: 80
 
     secrets:
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_TOKEN:
+        required: true
+
+jobs:
+  sonar-scan:
+    name: SonarQube Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout application repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ inputs.java_version }}
+          cache: maven
+
+      - name: Build and Test
+        run: mvn clean verify
+
+      - name: Check coverage threshold
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+
+          threshold = float("${{ inputs.coverage_threshold }}")
+          report_path = "target/site/jacoco/jacoco.xml"
+
+          print(f"Reading JaCoCo report: {report_path}")
+
+          tree = ET.parse(report_path)
+          root = tree.getroot()
+
+          line_counter = next(
+              counter
+              for counter in root.findall("counter")
+              if counter.attrib["type"] == "LINE"
+          )
+
+          missed = int(line_counter.attrib["missed"])
+          covered = int(line_counter.attrib["covered"])
+          total = missed + covered
+
+          coverage = (covered / total * 100) if total else 0
+
+          print("--------------------------------")
+          print(f"Covered lines: {covered}")
+          print(f"Missed lines: {missed}")
+          print(f"Actual coverage: {coverage:.2f}%")
+          print(f"Required coverage: {threshold:.2f}%")
+          print("--------------------------------")
+
+          if coverage < threshold:
+              raise SystemExit(
+                  f"Coverage check FAILED: "
+                  f"{coverage:.2f}% is below required "
+                  f"{threshold:.2f}%"
+              )
+
+          print("Coverage check PASSED.")
+          PY
+
+      - name: SonarQube Scan
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+
+        run: >
+          mvn sonar:sonar
+          -Dsonar.projectKey=${{ inputs.project_key }}
+          -Dsonar.host.url=${SONAR_HOST_URL}
+          -Dsonar.token=${SONAR_TOKEN}
+          -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+          -Dsonar.qualitygate.wait=true
