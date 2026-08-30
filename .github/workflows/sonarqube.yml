@@ -16,6 +16,7 @@ jobs:
     with:
       project_key: sonarqube-demo-app
       java_version: '21'
+      sonar_host_url: ${{ vars.SONAR_HOST_URL }}
 
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
