@@ -16,7 +16,7 @@ jobs:
     with:
       project_key: sonarqube-demo-app
       java_version: '21'
-      coverage_threshold: 30
+      coverage_threshold: 80
 
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
