@@ -11,7 +11,7 @@ on:
 
 jobs:
   sonar:
-    uses: anjaniswarna0/grandcentral-demo/.github/workflows/scan-sonarqube.yml@main
+    uses: anjaniswarna0/grandcentral-demo/.github/workflows/sonarqube.yml@main
 
     with:
       project_key: sonarqube-demo-app
