@@ -4,19 +4,34 @@ on:
   push:
     branches:
       - main
-
   pull_request:
     branches:
       - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  sonar:
+  sonarqube:
+    name: SonarQube
     uses: anjaniswarna0/grandcentral-demo/.github/workflows/sonarqube.yml@main
-
     with:
-      project_key: sonarqube-demo-app
-      java_version: '21'
+      app_name: grandcentral-demo
+      language: java
+      build_command: mvn -B clean compile
+      test_command: mvn -B verify
+      enable_code_coverage: true
+      coverage_file: auto
       coverage_threshold: 80
-
+      coverage_fail_on_threshold: true
+      sonarqube_args: >-
+        -Dsonar.sources=src/main/java
+        -Dsonar.tests=src/test/java
+        -Dsonar.java.binaries=target/classes
+        -Dsonar.java.test.binaries=target/test-classes
+        -Dsonar.qualitygate.wait=true
+      working_directory: '.'
     secrets:
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
