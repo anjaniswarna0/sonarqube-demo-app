@@ -17,7 +17,7 @@ jobs:
     name: SonarQube
     uses: anjaniswarna0/grandcentral-demo/.github/workflows/sonarqube.yml@main
     with:
-      app_name: grandcentral-demo
+      app_name: sonarqube-demo-app
       language: java
       build_command: mvn -B clean compile
       test_command: mvn -B verify
